@@ -17,6 +17,7 @@ class NetCDFConverterGUI:
     def __init__(self, master):
         self.master = master
         self.master.title("NetCDF to DFSU Converter")
+        self.master.minsize(width=400, height=200)
 
         self.dataset = None  
         self.selected_variable = tk.StringVar() 
@@ -71,17 +72,20 @@ class NetCDFConverterGUI:
         for widget in self.frame_dimensions.winfo_children():
             widget.destroy()
 
+        tk.Label(self.frame_dimensions, text="Dimensions").grid(row=0, column=0, columnspan=5)
+        row = 1
+
         for dim_name in self.dataset.dims:
             dimension = self.dataset[dim_name]
             min_val = self.format_value(dimension.min().values)
             max_val = self.format_value(dimension.max().values)
 
-            tk.Label(self.frame_dimensions, text=f"{dim_name} range:").pack()
+            tk.Label(self.frame_dimensions, text=f"{dim_name} range:").grid(row=row, column=0, sticky="ew")
 
             min_label = tk.Label(self.frame_dimensions, text="Minimum")
-            min_label.pack()
+            min_label.grid(row=row, column=1)
             min_entry = tk.Entry(self.frame_dimensions)
-            min_entry.pack()
+            min_entry.grid(row=row, column=2)
             min_entry.insert(0, min_val)
             self.min_entries[dim_name] = min_entry
             if "time" in dim_name.lower():
@@ -90,15 +94,16 @@ class NetCDFConverterGUI:
                 self.minimums[dim_name] = float(min_val)
 
             max_label = tk.Label(self.frame_dimensions, text="Maximum")
-            max_label.pack()
+            max_label.grid(row=row, column=3)
             max_entry = tk.Entry(self.frame_dimensions)
-            max_entry.pack()
+            max_entry.grid(row=row, column=4)
             max_entry.insert(0, max_val)
             self.max_entries[dim_name] = max_entry
             if "time" in dim_name.lower():
                 self.maximums[dim_name] = self.to_datetime(max_val)
             else:
                 self.maximums[dim_name] = float(max_val)
+            row = row + 1
 
     def get_dimension_ranges(self):
         dimension_ranges = {}
@@ -135,14 +140,14 @@ class NetCDFConverterGUI:
         self.x_selector.grid(row=0, column=1, padx=5, pady=5)
         self.set_default_dimension(self.x_selector, ['lon', 'longitude', 'X', 'x'])
 
-        tk.Label(self.frame_selectors, text="Y Dimension:").grid(row=1, column=0, padx=5, pady=5)
+        tk.Label(self.frame_selectors, text="Y Dimension:").grid(row=0, column=2, padx=5, pady=5)
         self.y_selector = ttk.Combobox(self.frame_selectors, values=dimension_names, state="readonly")
-        self.y_selector.grid(row=1, column=1, padx=5, pady=5)
+        self.y_selector.grid(row=0, column=3, padx=5, pady=5)
         self.set_default_dimension(self.y_selector, ['lat', 'latitude', 'Y', 'y'])
 
-        tk.Label(self.frame_selectors, text="Z Dimension:").grid(row=2, column=0, padx=5, pady=5)
+        tk.Label(self.frame_selectors, text="Z Dimension:").grid(row=0, column=4, padx=5, pady=5)
         self.z_selector = ttk.Combobox(self.frame_selectors, values=dimension_names, state="readonly")
-        self.z_selector.grid(row=2, column=1, padx=5, pady=5)
+        self.z_selector.grid(row=0, column=5, padx=5, pady=5)
         self.set_default_dimension(self.z_selector, ['depth', 'Depth', 'Z', 'z'], exclude='time')
 
     def create_convert_button(self):
@@ -162,7 +167,7 @@ class NetCDFConverterGUI:
         for widget in self.frame_variables.winfo_children():
             widget.destroy()
 
-        tk.Label(self.frame_variables, text="Variables:").pack()
+        tk.Label(self.frame_variables, text="Variables").grid(row=0, column=0, columnspan=5)
 
         variables = [var_name for var_name in self.dataset.variables if var_name not in self.dataset.dims]
 
@@ -180,21 +185,24 @@ class NetCDFConverterGUI:
         if variables:
             self.selected_variable.set(variables[0])
 
+        row = 1
         for var_name in variables:
-            rb = tk.Radiobutton(self.frame_variables, text=var_name, variable=self.selected_variable,
-                                value=var_name, command=self.update_variable_widgets)
-            rb.pack(anchor=tk.W)
+            rb = tk.Radiobutton(self.frame_variables, text=var_name, variable=self.selected_variable, value=var_name, command=self.update_variable_widgets)
+            rb.grid(row=row, column=0)
 
+            tk.Label(self.frame_variables, text="Item").grid(row=row, column=1)
             type_cb = ttk.Combobox(self.frame_variables, values=itemsDisplay, state="disabled")
             type_cb.bind("<KeyPress>", self.on_combobox_keypress)
-            type_cb.pack()
+            type_cb.grid(row=row, column=2)
 
+            tk.Label(self.frame_variables, text="Unit").grid(row=row, column=3)
             unit_cb = ttk.Combobox(self.frame_variables, values=unitsDisplay, state="disabled")
             unit_cb.bind("<KeyPress>", self.on_combobox_keypress)
-            unit_cb.pack()
+            unit_cb.grid(row=row, column=4)
 
+            tk.Label(self.frame_variables, text="Name").grid(row=row, column=5)
             var_name_entry = tk.Entry(self.frame_variables, state="disabled")
-            var_name_entry.pack()
+            var_name_entry.grid(row=row, column=6)
 
             self.var_widgets[var_name] = (type_cb, unit_cb, var_name_entry)
 
@@ -204,6 +212,7 @@ class NetCDFConverterGUI:
                 unit_cb.config(state="readonly")
                 var_name_entry.config(state="normal")
                 first_var = False
+            row = row + 1
 
     def update_variable_widgets(self):
         selected_var = self.selected_variable.get()
@@ -325,7 +334,7 @@ class NetCDFConverterGUI:
         codes[(points[:, 0] == min(x)) | (points[:, 0] == max(x))] = 1
         codes[(points[:, 1] == min(y)) | (points[:, 1] == max(y))] = 1
         builder = DfsuBuilder.Create(DfsuFileType.Dfsu2D)
-        builder.FileTitle = 'nc to Dfsu converter by abja@dhigroup.com'
+        builder.FileTitle = 'nc to Dfsu converter'
         factory = DfsFactory()
         builder.SetProjection(factory.CreateProjectionGeoOrigin('LONG/LAT', points[0][0], points[0][1], 0.0))
         builder.SetNodes(points[:, 0], points[:, 1], z, codes)
@@ -369,7 +378,7 @@ class NetCDFConverterGUI:
         codes[(points[:, 0] == min(x)) | (points[:, 0] == max(x))] = 1
         codes[(points[:, 1] == min(y)) | (points[:, 1] == max(y))] = 1
         builder = DfsuBuilder.Create(DfsuFileType.Dfsu3DSigma)
-        builder.FileTitle = 'nc to Dfsu converter by abja@dhigroup.com'
+        builder.FileTitle = 'nc to Dfsu converter'
         factory = DfsFactory()
         builder.SetProjection(factory.CreateProjectionGeoOrigin('LONG/LAT', points[0][0], points[0][1], 0.0))
         builder.SetNodes(points[:, 0], points[:, 1], points[:, 2], codes)
@@ -431,7 +440,7 @@ class NetCDFConverterGUI:
             self.depths = self.dataset[z_dim].values
             self.dates = self.dataset.time.values.astype(datetime)
 
-            fname = self.file_path.replace(".nc", "_"+selected_var+".dfsu")
+            fname = self.file_path.replace(".nc", " "+self.item[0]+".dfsu")
             if len(self.dataset[selected_var].dims) == 3:
                 self._create_dfsu2D_file(fname, selected_var)
             else:
